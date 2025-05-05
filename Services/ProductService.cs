@@ -7,6 +7,7 @@ public interface IProductService
     Task<IEnumerable<Product>> GetAllProductsAsync();
     Task<Product?> GetProductByIdAsync(int id);
     Task AddProductAsync(Product product);
+    Task UpdateProductAsync(Product product);
 }
 
 public class ProductService : IProductService
@@ -20,6 +21,7 @@ public class ProductService : IProductService
 
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
+
         return await _productRepository.GetAllAsync();
     }
 
@@ -31,6 +33,28 @@ public class ProductService : IProductService
     public async Task AddProductAsync(Product product)
     {
         await _productRepository.AddAsync(product);
+        await _productRepository.SaveChangesAsync();
+    }
+
+    public async Task UpdateProductAsync(Product updatedProduct)
+    {
+        // Check if the product exists
+        var existingProduct = await _productRepository.GetByIdAsync(updatedProduct.Id);
+        if (existingProduct == null)
+        {
+            throw new KeyNotFoundException($"Product with ID {updatedProduct.Id} not found.");
+        }
+
+        // Update the product properties
+        existingProduct.Name = updatedProduct.Name;
+        existingProduct.Satuan = updatedProduct.Satuan;
+        existingProduct.Harga = updatedProduct.Harga;
+        existingProduct.Modal = updatedProduct.Modal;
+        existingProduct.Expired = updatedProduct.Expired;
+        existingProduct.Barcode = updatedProduct.Barcode;
+        existingProduct.Note = updatedProduct.Note;
+        existingProduct.Flag = updatedProduct.Flag;
+        // Save changes
         await _productRepository.SaveChangesAsync();
     }
 }
