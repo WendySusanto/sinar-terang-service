@@ -39,7 +39,7 @@ public class SalesRepository : ISalesRepository
                     MemberName = m.Name,
                     DateAdded = pk.Penjualan.DateAdded,
                     Total = pk.Penjualan.Total
-                }).ToListAsync();
+                }).OrderByDescending(x => x.DateAdded).ToListAsync();
     }
 
     public async Task<SalesDetailsDTO?> GetByIdAsync(int id)

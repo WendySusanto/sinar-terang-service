@@ -21,7 +21,7 @@ public class ProductRepository : IProductRepository
 
     public async Task<IEnumerable<Product>> GetAllAsync()
     {
-        return await _dbContext.Products.ToListAsync();
+        return await _dbContext.Products.OrderBy(x => x.Name).ToListAsync();
     }
 
     public async Task<Product?> GetByIdAsync(int id)
@@ -42,7 +42,7 @@ public class ProductRepository : IProductRepository
     public async Task<(IEnumerable<Product>, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
     {
         var TotalCount = await _dbContext.Products.CountAsync();
-        var Products = await _dbContext.Products.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+        var Products = await _dbContext.Products.Skip((pageNumber - 1) * pageSize).Take(pageSize).OrderBy(x => x.Name).ToListAsync();
 
         return (Products, TotalCount);
     }
