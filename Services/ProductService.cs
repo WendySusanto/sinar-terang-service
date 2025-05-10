@@ -5,6 +5,8 @@ using Workspace.Models;
 public interface IProductService
 {
     Task<IEnumerable<Product>> GetAllProductsAsync();
+
+    Task<ProductPageDTO> GetPagedProductsAsync(int pageNumber, int pageSize);
     Task<Product?> GetProductByIdAsync(int id);
     Task AddProductAsync(Product product);
     Task UpdateProductAsync(Product product);
@@ -17,6 +19,21 @@ public class ProductService : IProductService
     public ProductService(IProductRepository productRepository)
     {
         _productRepository = productRepository;
+    }
+
+    public async Task<ProductPageDTO> GetPagedProductsAsync(int pageNumber, int pageSize)
+    {
+        var (products, totalCount) = await _productRepository.GetPagedAsync(pageNumber, pageSize);
+        var productPageDTO = new ProductPageDTO
+        {
+            Products = products,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalPage = (int)Math.Ceiling((double)totalCount / pageSize)
+        };
+
+        return productPageDTO;
     }
 
     public async Task<IEnumerable<Product>> GetAllProductsAsync()

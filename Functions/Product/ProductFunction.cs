@@ -13,6 +13,34 @@ public class ProductFunction
         _productService = productService;
     }
 
+    [Function("GetPagedProducts")]
+    public async Task<HttpResponseData> GetPagedProducts(
+    [HttpTrigger(AuthorizationLevel.Function, "get", Route = "products/page")] HttpRequestData req)
+    {
+        try
+        {
+            // Parse query parameters for pagination
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            int pageNumber = int.TryParse(query["pageNumber"], out var pn) ? pn : 1; // Default to page 1
+            int pageSize = int.TryParse(query["pageSize"], out var ps) ? ps : 30;   // Default to 30 items per page
+
+            // Get paginated products
+            var products = await _productService.GetPagedProductsAsync(pageNumber, pageSize);
+
+            // Create response
+            var response = req.CreateResponse(HttpStatusCode.OK);
+
+            await response.WriteAsJsonAsync(products);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync($"An error occurred: {ex.Message}");
+            return errorResponse;
+        }
+    }
+
     [Function("GetProducts")]
     public async Task<HttpResponseData> GetProducts(
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "products")] HttpRequestData req)

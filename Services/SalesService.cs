@@ -5,9 +5,10 @@ using Workspace.Models;
 
 public interface ISalesService
 {
-    Task<IEnumerable<Penjualan>> GetAllSalessAsync();
+    Task<SalesPageDTO> GetPagedSalesAsync(int pageNumber, int pageSize);
+    Task<IEnumerable<SalesDTO>> GetAllSalessAsync();
     Task<SalesDetailsDTO?> GetSalesByIdAsync(int id);
-    Task AddSalesAsync(AddSalesDTO Sales);
+    Task AddSalesAsync(SalesAddDTO Sales);
 }
 
 public class SalesService : ISalesService
@@ -19,7 +20,7 @@ public class SalesService : ISalesService
         _salesRepository = SalesRepository;
     }
 
-    public async Task<IEnumerable<Penjualan>> GetAllSalessAsync()
+    public async Task<IEnumerable<SalesDTO>> GetAllSalessAsync()
     {
         return await _salesRepository.GetAllAsync();
     }
@@ -29,7 +30,7 @@ public class SalesService : ISalesService
         return await _salesRepository.GetByIdAsync(id);
     }
 
-    public async Task AddSalesAsync(AddSalesDTO salesDto)
+    public async Task AddSalesAsync(SalesAddDTO salesDto)
     {
         var penjualan = new Penjualan
         {
@@ -53,4 +54,20 @@ public class SalesService : ISalesService
 
         await _salesRepository.SaveChangesAsync();
     }
+
+    public async Task<SalesPageDTO> GetPagedSalesAsync(int pageNumber, int pageSize)
+    {
+        var (sales, totalCount) = await _salesRepository.GetPagedAsync(pageNumber, pageSize);
+        var salesPageDTO = new SalesPageDTO
+        {
+            Sales = sales,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalPage = (int)Math.Ceiling((double)totalCount / pageSize)
+        };
+
+        return salesPageDTO;
+    }
+
 }

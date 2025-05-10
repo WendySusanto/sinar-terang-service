@@ -3,7 +3,8 @@ using Workspace.Models;
 
 public interface ISalesRepository
 {
-    Task<IEnumerable<Penjualan>> GetAllAsync();
+    Task<(IEnumerable<SalesDTO>, int totalCount)> GetPagedAsync(int pageNumber, int pageSize);
+    Task<IEnumerable<SalesDTO>> GetAllAsync();
     Task<SalesDetailsDTO?> GetByIdAsync(int id);
     Task AddPenjualanAsync(Penjualan penjualan);
     Task AddProductToPenjualanAsync(ICollection<ProductToPenjualan> productToPenjualan);
@@ -19,9 +20,26 @@ public class SalesRepository : ISalesRepository
         _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<Penjualan>> GetAllAsync()
+    public async Task<IEnumerable<SalesDTO>> GetAllAsync()
     {
-        return await _dbContext.Penjualans.ToListAsync();
+        return await _dbContext.Penjualans
+            .Join(_dbContext.Kasirs,
+                p => p.KasirId,
+                k => k.Id,
+                (p, k) => new { Penjualan = p, Kasir = k })
+            .Join(_dbContext.Members,
+                pk => pk.Penjualan.MemberId,
+                m => m.Id,
+                (pk, m) => new SalesDTO
+                {
+                    Id = pk.Penjualan.Id,
+                    KasirId = pk.Penjualan.KasirId,
+                    KasirName = pk.Kasir.Name,
+                    MemberId = pk.Penjualan.MemberId,
+                    MemberName = m.Name,
+                    DateAdded = pk.Penjualan.DateAdded,
+                    Total = pk.Penjualan.Total
+                }).ToListAsync();
     }
 
     public async Task<SalesDetailsDTO?> GetByIdAsync(int id)
@@ -72,5 +90,35 @@ public class SalesRepository : ISalesRepository
     public async Task SaveChangesAsync()
     {
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<(IEnumerable<SalesDTO>, int totalCount)> GetPagedAsync(int pageNumber, int pageSize)
+    {
+        var totalCount = await _dbContext.Penjualans.CountAsync();
+
+        var sales = await _dbContext.Penjualans
+            .Join(_dbContext.Kasirs,
+                p => p.KasirId,
+                k => k.Id,
+                (p, k) => new { Penjualan = p, Kasir = k })
+            .Join(_dbContext.Members,
+                pk => pk.Penjualan.MemberId,
+                m => m.Id,
+                (pk, m) => new SalesDTO
+                {
+                    Id = pk.Penjualan.Id,
+                    KasirId = pk.Penjualan.KasirId,
+                    KasirName = pk.Kasir.Name,
+                    MemberId = pk.Penjualan.MemberId,
+                    MemberName = m.Name,
+                    DateAdded = pk.Penjualan.DateAdded,
+                    Total = pk.Penjualan.Total
+                })
+            .Skip((pageNumber - 1) * pageSize) // Skip records for pagination
+            .Take(pageSize) // Take the required number of records
+            .OrderByDescending(x => x.DateAdded) // Order by DateAdded
+            .ToListAsync();
+
+        return (sales, totalCount);
     }
 }

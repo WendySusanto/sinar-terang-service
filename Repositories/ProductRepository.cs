@@ -4,6 +4,7 @@ using Workspace.Models;
 public interface IProductRepository
 {
     Task<IEnumerable<Product>> GetAllAsync();
+    Task<(IEnumerable<Product>, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize);
     Task<Product?> GetByIdAsync(int id);
     Task AddAsync(Product product);
     Task SaveChangesAsync();
@@ -33,10 +34,16 @@ public class ProductRepository : IProductRepository
         await _dbContext.Products.AddAsync(product);
     }
 
-
-
     public async Task SaveChangesAsync()
     {
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<(IEnumerable<Product>, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize)
+    {
+        var TotalCount = await _dbContext.Products.CountAsync();
+        var Products = await _dbContext.Products.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        return (Products, TotalCount);
     }
 }

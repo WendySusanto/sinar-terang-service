@@ -13,6 +13,34 @@ public class SalesFunction
         _SalesService = SalesService;
     }
 
+    [Function("GetPagedSales")]
+    public async Task<HttpResponseData> GetPagedProducts(
+    [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sales/page")] HttpRequestData req)
+    {
+        try
+        {
+            // Parse query parameters for pagination
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            int pageNumber = int.TryParse(query["pageNumber"], out var pn) ? pn : 1; // Default to page 1
+            int pageSize = int.TryParse(query["pageSize"], out var ps) ? ps : 30;   // Default to 30 items per page
+
+            // Get paginated products
+            var products = await _SalesService.GetPagedSalesAsync(pageNumber, pageSize);
+
+            // Create response
+            var response = req.CreateResponse(HttpStatusCode.OK);
+
+            await response.WriteAsJsonAsync(products);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync($"An error occurred: {ex.Message}");
+            return errorResponse;
+        }
+    }
+
     [Function("GetSales")]
     public async Task<HttpResponseData> GetSales(
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sales")] HttpRequestData req)
@@ -58,7 +86,7 @@ public class SalesFunction
 
         try
         {
-            var sales = await JsonSerializer.DeserializeAsync<AddSalesDTO>(req.Body);
+            var sales = await JsonSerializer.DeserializeAsync<SalesAddDTO>(req.Body);
             if (sales == null)
             {
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
