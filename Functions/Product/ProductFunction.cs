@@ -107,6 +107,61 @@ public class ProductFunction
 
     }
 
+    [Function("DeleteProduct")]
+    public async Task<HttpResponseData> DeleteProduct(
+        [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "products/{id:int}")] HttpRequestData req, int id)
+    {
+
+        try
+        {
+            if (id <= 0)
+            {
+                var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequest.WriteStringAsync("Invalid product ID.");
+                return badRequest;
+            }
+
+            await _productService.DeleteProductAsync(id);
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync($"An error occurred: {ex.Message}");
+            return errorResponse;
+        }
+
+    }
+
+    [Function("BulkUpsertProduct")]
+    public async Task<HttpResponseData> BulkUpsertProduct(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "products/import")] HttpRequestData req)
+    {
+
+        try
+        {
+            var product = await JsonSerializer.DeserializeAsync<List<Product>>(req.Body);
+            if (product == null)
+            {
+                var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequest.WriteStringAsync("Invalid product data.");
+                return badRequest;
+            }
+
+            await _productService.BulkUpsertProductAsync(product);
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync($"An error occurred: {ex.Message}");
+            return errorResponse;
+        }
+
+    }
+
     [Function("UpdateProduct")]
     public async Task<HttpResponseData> UpdateProduct(
             [HttpTrigger(AuthorizationLevel.Function, "patch", Route = "products")] HttpRequestData req)
@@ -115,6 +170,9 @@ public class ProductFunction
         try
         {
             var product = await JsonSerializer.DeserializeAsync<Product>(req.Body);
+
+            Console.WriteLine($"Updating product: {JsonSerializer.Serialize(product)}");
+
             if (product == null)
             {
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);

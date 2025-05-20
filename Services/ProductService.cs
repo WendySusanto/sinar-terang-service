@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Storage.Json;
 using Workspace.Models;
 
 public interface IProductService
@@ -10,6 +13,8 @@ public interface IProductService
     Task<Product?> GetProductByIdAsync(int id);
     Task AddProductAsync(Product product);
     Task UpdateProductAsync(Product product);
+    Task BulkUpsertProductAsync(List<Product> product);
+    Task DeleteProductAsync(int id);
 }
 
 public class ProductService : IProductService
@@ -49,6 +54,12 @@ public class ProductService : IProductService
 
     public async Task AddProductAsync(Product product)
     {
+
+        product.DateAdded = DateTime.UtcNow;
+        product.Flag = 1; // Set default flag value
+        product.Expired = product.Expired ?? DateTime.UtcNow.AddYears(99).ToString("yyyy-MM-dd"); // Set default expired date if not provided
+
+        Console.WriteLine($"Adding product: {JsonSerializer.Serialize(product)}");
         await _productRepository.AddAsync(product);
         await _productRepository.SaveChangesAsync();
     }
@@ -67,11 +78,51 @@ public class ProductService : IProductService
         existingProduct.Satuan = updatedProduct.Satuan;
         existingProduct.Harga = updatedProduct.Harga;
         existingProduct.Modal = updatedProduct.Modal;
-        existingProduct.Expired = updatedProduct.Expired;
+        existingProduct.Expired = updatedProduct.Expired ?? DateTime.UtcNow.AddYears(99).ToString("yyyy-MM-dd");
         existingProduct.Barcode = updatedProduct.Barcode;
         existingProduct.Note = updatedProduct.Note;
         existingProduct.Flag = updatedProduct.Flag;
         // Save changes
+        await _productRepository.SaveChangesAsync();
+    }
+
+    public async Task BulkUpsertProductAsync(List<Product> product)
+    {
+        foreach (var item in product)
+        {
+            var existingProduct = await _productRepository.GetByIdAsync(item.Id);
+            if (existingProduct != null)
+            {
+                // Update existing product
+                existingProduct.Name = item.Name;
+                existingProduct.Satuan = item.Satuan;
+                existingProduct.Harga = item.Harga;
+                existingProduct.Modal = item.Modal;
+                existingProduct.Expired = item.Expired ?? DateTime.UtcNow.AddYears(99).ToString("yyyy-MM-dd");
+                existingProduct.Barcode = item.Barcode;
+                existingProduct.Note = item.Note;
+                existingProduct.Flag = item.Flag;
+            }
+            else
+            {
+                // Add new product
+                await _productRepository.AddAsync(item);
+            }
+        }
+
+        await _productRepository.SaveChangesAsync();
+    }
+
+    public async Task DeleteProductAsync(int id)
+    {
+        var product = await _productRepository.GetByIdAsync(id);
+        if (product == null)
+        {
+            throw new KeyNotFoundException($"Product with ID {id} not found.");
+        }
+
+        // Delete the product
+        _productRepository.Delete(product);
         await _productRepository.SaveChangesAsync();
     }
 }

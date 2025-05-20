@@ -7,6 +7,7 @@ public interface IProductRepository
     Task<(IEnumerable<Product>, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize);
     Task<Product?> GetByIdAsync(int id);
     Task AddAsync(Product product);
+    void Delete(Product product);
     Task SaveChangesAsync();
 }
 
@@ -32,6 +33,10 @@ public class ProductRepository : IProductRepository
     public async Task AddAsync(Product product)
     {
         await _dbContext.Products.AddAsync(product);
+    }
+    public void Delete(Product product)
+    {
+        _dbContext.Products.Remove(product);
     }
 
     public async Task SaveChangesAsync()
